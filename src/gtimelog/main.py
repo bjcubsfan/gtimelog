@@ -887,8 +887,12 @@ class MainWindow:
     def on_last_weeks_sog_email_activate(self, widget):
         day = self.timelog.day - datetime.timedelta(7)
         reports = Reports(self.weekly_window(day=day))
-        report = reports.weekly_sog_email_report
-        self.mail(report)
+        draftfn = tempfile.mktemp(suffix='.gtimelog') # XXX unsafe!
+        with codecs.open(draftfn, 'w', encoding='UTF-8') as draft:
+            reports.weekly_sog_email_report(
+                    draft, self.settings.email, self.settings.name,
+                    self.tasks.details)
+        self.spawn(self.settings.mailer, draftfn)
 
     def on_last_weeks_enter_redmine_activate(self, widget):
         pass

@@ -12,6 +12,7 @@ import re
 import urllib
 from operator import itemgetter
 
+import yaml
 
 PY3 = sys.version_info[0] >= 3
 
@@ -414,10 +415,9 @@ class Reports(object):
         self.window = window
 
     def _sog_email_report(self, output, email, who, subject, period_name,
-                             estimated_column=False):
+                              task_details, estimated_column=False):
         """A report format for the FAA's SOG."""
         window = self.window
-
         output.write('Hi %s,\n\n' % email.split('.')[0].title())
         output.write('Here is my activity report.\n\n')
         output.write("%s:\n" % subject)
@@ -447,12 +447,12 @@ class Reports(object):
             else:
                 categories = sorted(entries)
             for cat in categories:
-                output.write('%s:\n' % cat)
+                output.write('%s:\n' % task_details[cat]['name'])
                 work = [(entry, duration)
                         for start, entry, duration in entries[cat]]
                 work.sort()
                 for entry, duration in work:
-                    entry = textwrap.wrap(entry, 58)
+                    entry = textwrap.wrap(entry, 60)
                     if not duration:
                         continue # skip empty "arrival" entries
                     if estimated_column:
@@ -460,25 +460,24 @@ class Reports(object):
                                      (format_duration_short(duration),
                                      '-', entry))
                     else:
-                        output.write(u"  %-8s  %+4s\n" %
+                        output.write(u"  %-6s  %+4s\n" %
                                 (format_duration_short(duration), entry[0]))
                         if len(entry) > 1:
                             for extra_line in entry[1:]:
-                                output.write(u"            %s\n" % extra_line)
-
+                                output.write(u"          %s\n" % extra_line)
                 output.write('\n')
         output.write("Total work done this %s: %s\n" %
                      (period_name, format_duration_short(total_work)))
-
         output.write('\n')
-
         ordered_by_time = [(time, cat) for cat, time in totals.items()]
         ordered_by_time.sort(reverse=True)
         max_cat_length = max([len(cat) for cat in totals.keys()])
-        line_format = '  %-' + str(max_cat_length + 4) + 's %+5s\n'
+        line_format = '  %-6s  %+4s\n'
         output.write('Categories by time spent:\n')
         for time, cat in ordered_by_time:
-            output.write(line_format % (cat, format_duration_short(time)))
+            output.write(line_format % (
+                    format_duration_short(time),
+                    task_details[cat]['name']))
 
     def _categorizing_report(self, output, email, who, subject, period_name,
                              estimated_column=False):
@@ -654,12 +653,12 @@ class Reports(object):
             self._report_categories(output, categories)
 
     def weekly_sog_email_report(self, output, email, who,
-                                  estimated_column=False):
+                                task_details, estimated_column=False):
         """Format a weekly report for the SOG."""
         week = self.window.min_timestamp.date().isoformat()
         subject = u'%s Activity Report for the Week of %s' % (who, week)
         return self._sog_email_report(output, email, who, subject,
-                                         period_name='week',
+                                         'week', task_details,
                                          estimated_column=estimated_column)
 
     def weekly_report_categorized(self, output, email, who,
@@ -913,7 +912,7 @@ class TaskList(object):
     (group_name, list_of_group_items).
     """
 
-    other_title = 'Other'
+    other_title = 'SOG'
 
     loading_callback = None
     loaded_callback = None
@@ -921,6 +920,8 @@ class TaskList(object):
 
     def __init__(self, filename):
         self.filename = filename
+        # More details needed for SOG projects
+        self.details = None
         self.load()
 
     def check_reload(self):
@@ -951,15 +952,24 @@ class TaskList(object):
         self.last_mtime = self.get_mtime()
         try:
             with open(self.filename) as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    if ':' in line:
-                        group, task = [s.strip() for s in line.split(':', 1)]
-                    else:
-                        group, task = self.other_title, line
-                    groups.setdefault(group, []).append(task)
+                if f.readline().strip() == '---':
+                    # YAML task list detected
+                    f.seek(0)
+                    yaml_task_list = yaml.load(f)
+                    for project in sorted(yaml_task_list):
+                        groups.setdefault(self.other_title, []).append(project)
+                    self.details = yaml_task_list
+                else:
+                    f.seek(0)
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith('#'):
+                            continue
+                        if ':' in line:
+                            group, task = [s.strip() for s in line.split(':', 1)]
+                        else:
+                            group, task = self.other_title, line
+                        groups.setdefault(group, []).append(task)
         except IOError:
             pass # the file's not there, so what?
         self.groups = sorted(groups.items())
