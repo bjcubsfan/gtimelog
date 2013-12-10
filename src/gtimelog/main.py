@@ -884,6 +884,15 @@ class MainWindow:
             report = reports.weekly_report_plain
         self.mail(report)
 
+    def on_last_weeks_sog_email_activate(self, widget):
+        day = self.timelog.day - datetime.timedelta(7)
+        reports = Reports(self.weekly_window(day=day))
+        report = reports.weekly_sog_email_report
+        self.mail(report)
+
+    def on_last_weeks_enter_redmine_activate(self, widget):
+        pass
+
     def on_last_weeks_report_activate(self, widget):
         """File -> Weekly Report for Last Week"""
         day = self.timelog.day - datetime.timedelta(7)

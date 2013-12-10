@@ -7,6 +7,7 @@ import csv
 import datetime
 import os
 import sys
+import textwrap
 import re
 import urllib
 from operator import itemgetter
@@ -412,6 +413,73 @@ class Reports(object):
     def __init__(self, window):
         self.window = window
 
+    def _sog_email_report(self, output, email, who, subject, period_name,
+                             estimated_column=False):
+        """A report format for the FAA's SOG."""
+        window = self.window
+
+        output.write('Hi %s,\n\n' % email.split('.')[0].title())
+        output.write('Here is my activity report.\n\n')
+        output.write("%s:\n" % subject)
+        output.write('\n')
+        items = list(window.all_entries())
+        if not items:
+            output.write("No work done this %s.\n" % period_name)
+            return
+        if estimated_column:
+            output.write(46 * " " + "estimated        actual\n")
+        else:
+            output.write(("project:\n"))
+            output.write(("  TIME WORKED" + 49 * " " + "ACTIVITY\n"))
+            output.write('-' * 70 + '\n')
+
+        total_work, total_slacking = window.totals()
+        entries, totals = window.categorized_work_entries()
+        if entries:
+            if None in entries:
+                e = entries.pop(None)
+                categories = sorted(entries)
+                t = totals.pop(None)
+                if t.seconds > 0:
+                    totals['No category'] = t
+                    categories.append('No category')
+                    entries['No category'] = e
+            else:
+                categories = sorted(entries)
+            for cat in categories:
+                output.write('%s:\n' % cat)
+                work = [(entry, duration)
+                        for start, entry, duration in entries[cat]]
+                work.sort()
+                for entry, duration in work:
+                    entry = textwrap.wrap(entry, 58)
+                    if not duration:
+                        continue # skip empty "arrival" entries
+                    if estimated_column:
+                        output.write(u"  %-8s  %-14s  %s\n" %
+                                     (format_duration_short(duration),
+                                     '-', entry))
+                    else:
+                        output.write(u"  %-8s  %+4s\n" %
+                                (format_duration_short(duration), entry[0]))
+                        if len(entry) > 1:
+                            for extra_line in entry[1:]:
+                                output.write(u"            %s\n" % extra_line)
+
+                output.write('\n')
+        output.write("Total work done this %s: %s\n" %
+                     (period_name, format_duration_short(total_work)))
+
+        output.write('\n')
+
+        ordered_by_time = [(time, cat) for cat, time in totals.items()]
+        ordered_by_time.sort(reverse=True)
+        max_cat_length = max([len(cat) for cat in totals.keys()])
+        line_format = '  %-' + str(max_cat_length + 4) + 's %+5s\n'
+        output.write('Categories by time spent:\n')
+        for time, cat in ordered_by_time:
+            output.write(line_format % (cat, format_duration_short(time)))
+
     def _categorizing_report(self, output, email, who, subject, period_name,
                              estimated_column=False):
         """A report that displays entries by category.
@@ -584,6 +652,15 @@ class Reports(object):
 
         if categories:
             self._report_categories(output, categories)
+
+    def weekly_sog_email_report(self, output, email, who,
+                                  estimated_column=False):
+        """Format a weekly report for the SOG."""
+        week = self.window.min_timestamp.date().isoformat()
+        subject = u'%s Activity Report for the Week of %s' % (who, week)
+        return self._sog_email_report(output, email, who, subject,
+                                         period_name='week',
+                                         estimated_column=estimated_column)
 
     def weekly_report_categorized(self, output, email, who,
                                   estimated_column=False):
