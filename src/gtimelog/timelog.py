@@ -8,10 +8,12 @@ import datetime
 import os
 import sys
 import textwrap
+import json
 import re
 import urllib
 from operator import itemgetter
 
+import requests
 import yaml
 
 PY3 = sys.version_info[0] >= 3
@@ -447,7 +449,11 @@ class Reports(object):
             else:
                 categories = sorted(entries)
             for cat in categories:
-                output.write('%s:\n' % task_details[cat]['name'])
+                if cat in task_details:
+                    cat_full_name = task_details[cat]['name']
+                else:
+                    cat_full_name = cat
+                output.write('%s:\n' % cat_full_name)
                 work = [(entry, duration)
                         for start, entry, duration in entries[cat]]
                 work.sort()
@@ -475,9 +481,88 @@ class Reports(object):
         line_format = '  %-6s  %+4s\n'
         output.write('Categories by time spent:\n')
         for time, cat in ordered_by_time:
+            if cat in task_details:
+                cat_full_name = task_details[cat]['name']
+            else:
+                cat_full_name = cat
             output.write(line_format % (
                     format_duration_short(time),
-                    task_details[cat]['name']))
+                    cat_full_name))
+
+    def _redmine_entry(self,
+                       week,
+                       output,
+                       redmine_config_path,
+                       redmine_time_entry_url,
+                       task_details,
+                       period_name):
+        """Enter tasks in to Redmine Time Tracking."""
+        window = self.window
+        items = list(window.all_entries())
+        if not items:
+            output.write("No work done this %s.\n" % period_name)
+            output.write("No Redmine entries attempted.\n")
+            return
+        total_work, total_slacking = window.totals()
+        entries, totals = window.categorized_work_entries()
+        if entries:
+            if None in entries:
+                e = entries.pop(None)
+                categories = sorted(entries)
+                t = totals.pop(None)
+                if t.seconds > 0:
+                    totals['No category'] = t
+                    categories.append('No category')
+                    entries['No category'] = e
+            else:
+                categories = sorted(entries)
+            redmine_config = yaml.load(redmine_config_path)
+            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+            for cat in categories:
+                if cat not in task_details:
+                    output.write(('No id for the project "%s", aborting'
+                            'Redmine entry\n') % cat)
+                    return
+                else:
+                    cat_full_name = task_details[cat]['name']
+                output.write('\nEntering Tasks for %s:\n' % cat_full_name)
+                work = [(start, entry, duration)
+                        for start, entry, duration in entries[cat]]
+                work.sort()
+                for start, entry, duration in work:
+                    if not duration:
+                        continue # skip empty "arrival" entries
+                    comments = entry
+                    if 'task' in task_details[cat]:
+                        redmine_id = 'issue_id'
+                        this_id = task_details[cat]['task']
+                    else:
+                        redmine_id = 'project_id'
+                        this_id = task_details[cat]['id']
+                    hours_worked = round(duration.total_seconds() / 3600, 1)
+                    redmine_entry = {'time_entry':{
+                            redmine_id: this_id,
+                            'spent_on': start.date().isoformat(),
+                            'hours': hours_worked,
+                            'comments': entry }}
+                    output.write('\n')
+                    response = requests.post(redmine_time_entry_url, 
+                            headers=headers,
+                            data=json.dumps(redmine_entry),
+                            auth=(redmine_config['key'], 'any_password_works'))
+                    if response.ok:
+                        output.write('Redmine entry completed:\n%s\n' % (
+                                json.dumps(response.json(),
+                                sort_keys=True, 
+                                indent=4, separators=(',', ': '))))
+                    else:
+                        output.write(('ERROR: %d on this attempted entry:\n'
+                            '%s\n') % (response.status_code,
+                                    json.dumps(
+                                    redmine_entry,
+                                    sort_keys=True, 
+                                    indent=4, 
+                                    separators=(',', ': '))))
 
     def _categorizing_report(self, output, email, who, subject, period_name,
                              estimated_column=False):
@@ -660,6 +745,21 @@ class Reports(object):
         return self._sog_email_report(output, email, who, subject,
                                          'week', task_details,
                                          estimated_column=estimated_column)
+
+    def weekly_redmine_entry(self,
+                             output,
+                             redmine_config_path,
+                             redmine_time_entry_url,
+                             task_details):
+        """Enter time entries in Redmine."""
+        redmine_config = yaml.load(redmine_time_entry_url)
+        week = self.window.min_timestamp.date().isoformat()
+        return self._redmine_entry(week,
+                                   output,
+                                   redmine_config_path,
+                                   redmine_time_entry_url,
+                                   task_details,
+                                   period_name='week')
 
     def weekly_report_categorized(self, output, email, who,
                                   estimated_column=False):

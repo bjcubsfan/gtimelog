@@ -884,19 +884,6 @@ class MainWindow:
             report = reports.weekly_report_plain
         self.mail(report)
 
-    def on_last_weeks_sog_email_activate(self, widget):
-        day = self.timelog.day - datetime.timedelta(7)
-        reports = Reports(self.weekly_window(day=day))
-        draftfn = tempfile.mktemp(suffix='.gtimelog') # XXX unsafe!
-        with codecs.open(draftfn, 'w', encoding='UTF-8') as draft:
-            reports.weekly_sog_email_report(
-                    draft, self.settings.email, self.settings.name,
-                    self.tasks.details)
-        self.spawn(self.settings.mailer, draftfn)
-
-    def on_last_weeks_enter_redmine_activate(self, widget):
-        pass
-
     def on_last_weeks_report_activate(self, widget):
         """File -> Weekly Report for Last Week"""
         day = self.timelog.day - datetime.timedelta(7)
@@ -921,6 +908,57 @@ class MainWindow:
             else:
                 report = reports.weekly_report_plain
             self.mail(report)
+
+    def on_weekly_sog_email_activate(self, widget):
+        day = self.timelog.day
+        reports = Reports(self.weekly_window(day=day))
+        draftfn = tempfile.mktemp(suffix='.gtimelog') # XXX unsafe!
+        with codecs.open(draftfn, 'w', encoding='UTF-8') as draft:
+            reports.weekly_sog_email_report(
+                    draft, self.settings.email, self.settings.name,
+                    self.tasks.details)
+        self.spawn(self.settings.mailer, draftfn)
+
+    def on_last_weeks_sog_email_activate(self, widget):
+        day = self.timelog.day - datetime.timedelta(7)
+        reports = Reports(self.weekly_window(day=day))
+        draftfn = tempfile.mktemp(suffix='.gtimelog') # XXX unsafe!
+        with codecs.open(draftfn, 'w', encoding='UTF-8') as draft:
+            reports.weekly_sog_email_report(
+                    draft, self.settings.email, self.settings.name,
+                    self.tasks.details)
+        self.spawn(self.settings.mailer, draftfn)
+
+    def on_previous_sog_email_activate(self, widget):
+        day = self.choose_date()
+        if day:
+            reports = Reports(self.weekly_window(day=day))
+            draftfn = tempfile.mktemp(suffix='.gtimelog') # XXX unsafe!
+            with codecs.open(draftfn, 'w', encoding='UTF-8') as draft:
+                reports.weekly_sog_email_report(
+                        draft, self.settings.email, self.settings.name,
+                        self.tasks.details)
+            self.spawn(self.settings.mailer, draftfn)
+
+    def on_weekly_enter_redmine_activate(self, widget):
+        day = self.timelog.day
+        reports = Reports(self.weekly_window(day=day))
+        enter_redmine = reports.weekly_redmine_entry
+        self.redmine(enter_redmine)
+
+    def on_last_weeks_enter_redmine_activate(self, widget):
+        day = self.timelog.day - datetime.timedelta(7)
+        reports = Reports(self.weekly_window(day=day))
+        enter_redmine = reports.weekly_redmine_entry
+        self.redmine(enter_redmine)
+
+    def on_previous_week_enter_redmine_activate(self, widget):
+        day = self.choose_date()
+        if day:
+            day = self.timelog.day - datetime.timedelta(7)
+            reports = Reports(self.weekly_window(day=day))
+            enter_redmine = reports.weekly_redmine_entry
+            self.redmine(enter_redmine)
 
     def monthly_window(self, day=None):
         if not day:
@@ -1004,6 +1042,16 @@ class MainWindow:
             write_draft(draft, self.settings.email, self.settings.name)
         self.spawn(self.settings.mailer, draftfn)
         # XXX rm draftfn when done -- but how?
+
+    def redmine(self, enter_redmine):
+        """Make entries to Redmine."""
+        draftfn = tempfile.mktemp(suffix='gtimelog') # XXX unsafe!
+        with codecs.open(draftfn, 'w', encoding='UTF-8') as output_file:
+            enter_redmine(output_file,
+                    self.settings.redmine_config,
+                    self.settings.redmine_time_entry_url,
+                    self.tasks.details)
+        self.spawn(self.settings.mailer, draftfn)
 
     def spawn(self, command, arg=None):
         """Spawn a process in background"""

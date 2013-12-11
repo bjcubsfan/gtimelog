@@ -363,13 +363,23 @@ GTimeLog is a time tracking application.
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="last_weeks_enter_redmine">
-                        <property name="label">Weekly Enter Redmine for _Last Week</property>
+                      <object class="GtkImageMenuItem" id="previous_week_report">
+                        <property name="label">Weekly Report for a Pre_vious Week...</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate" handler="on_last_weeks_enter_redmine_activate" swapped="no"/>
+                        <signal name="activate" handler="on_previous_week_report_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="weekly_sog_email_report">
+                        <property name="label">_Weekly SOG email</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_weekly_sog_email_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -383,13 +393,43 @@ GTimeLog is a time tracking application.
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="previous_week_report">
-                        <property name="label">Weekly Report for a Pre_vious Week...</property>
+                      <object class="GtkImageMenuItem" id="previous_sog_email_report">
+                        <property name="label">Weekly SOG email for _Previous Week</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate" handler="on_previous_week_report_activate" swapped="no"/>
+                        <signal name="activate" handler="on_previous_sog_email_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="weekly_enter_redmine">
+                        <property name="label">_Weekly Redmine entry</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_weekly_enter_redmine_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="last_weeks_enter_redmine">
+                        <property name="label">Weekly Redmine entry for _Last Week</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_last_weeks_enter_redmine_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="previous_week_enter_redmine">
+                        <property name="label">Weekly Redmine entry for _Previous Week</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_previous_week_enter_redmine_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>

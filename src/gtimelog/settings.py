@@ -51,6 +51,8 @@ class Settings(object):
     start_in_tray = False
 
     report_style = 'plain'
+    redmine_time_entry_url = ''
+    redmine_config = os.path.join(os.path.expanduser('~'), '.redmine')
 
     def check_legacy_config(self):
         envar_home = os.environ.get('GTIMELOG_HOME')
@@ -109,6 +111,9 @@ class Settings(object):
                    str(self.prefer_old_tray_icon))
         config.set('gtimelog', 'report_style', str(self.report_style))
         config.set('gtimelog', 'start_in_tray', str(self.start_in_tray))
+        config.set('gtimelog', 'redmine_time_entry_url', 
+                str(self.redmine_time_entry_url))
+        config.set('gtimelog', 'redmine_config', str(self.redmine_config))
         return config
 
     if PY3:
@@ -145,6 +150,10 @@ class Settings(object):
                                                       'prefer_old_tray_icon')
         self.report_style = config.get('gtimelog', 'report_style')
         self.start_in_tray = config.getboolean('gtimelog', 'start_in_tray')
+        self.redmine_time_entry_url = config.get('gtimelog', 'redmine_time_entry_url')
+        self.redmine_config = config.get('gtimelog', 'redmine_config')
+        if os.path.isfile(self.redmine_config):
+            self.redmine_config = ''.join(open(self.redmine_config).readlines())
 
     def save(self, filename):
         config = self._config()
