@@ -955,7 +955,6 @@ class MainWindow:
     def on_previous_week_enter_redmine_activate(self, widget):
         day = self.choose_date()
         if day:
-            day = self.timelog.day - datetime.timedelta(7)
             reports = Reports(self.weekly_window(day=day))
             enter_redmine = reports.weekly_redmine_entry
             self.redmine(enter_redmine)
